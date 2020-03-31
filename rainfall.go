@@ -21,7 +21,7 @@ type neorsdRainfallStruct struct {
 }
 
 //Get the NEORSD rainfall info, returning the result as a byte string.
-func getRainfall(urlToGet string, yearIndex int, month string, logVerbose bool) ([]byte) {
+func getRainfall(urlToGet string, yearIndex int, month string, location string, logVerbose bool) ([]byte) {
 	if logVerbose {
 		fmt.Println("In getRainfall")
 	}
@@ -45,7 +45,7 @@ formData := url.Values{
 	// "search[value]": {""},
 	// "search[regex]": {"false"},
 	"startingYear": {strconv.Itoa(yearIndex)},
-	"rainfallSite": {"Beachwood"},
+	"rainfallSite": {location},
 	//"day": {"1"},
 	"month": {month},
 	//"fullDate": {"March 1, 2012"},
@@ -71,15 +71,17 @@ formData := url.Values{
 
 func main() {
 	fmt.Println("GetRainfall v1.0")
-	fmt.Println("Specify year to get with -year= command line argument")
-	fmt.Println("Output is Year Month Day, rainfall in inches, rounded to nearest hundreth.")
+	fmt.Println("Use -h for arguments.")
+	fmt.Println("Output is Location, Year Month Day, and rainfall in inches (rounded to nearest hundreth).")
 	fmt.Println("")
+	location := flag.String("location","Beachwood","The name of the gauge location whose data you want to get")
 	yearToGet := flag.Int("year", 2012, "Year of rainfall data to get")
 	logVerbose := flag.Bool("verbose", false, "Writes verbose logs for debugging")
 	flag.Parse()
 
 	if *logVerbose {
 		fmt.Println("Verbose logging enabled.")
+		fmt.Println("Getting data for:", *location, *yearToGet)
 	}
 
 	//Define the APIs base URL
@@ -93,11 +95,11 @@ func main() {
 
 	for _,month := range months {
 		if *logVerbose {
-			fmt.Println("Getting data for", yearToGet)
+			fmt.Println("Getting data for:", month, *yearToGet)
 		}
 
 		//Get the rainfall for the month.
-		neorsdRainfallJSON := getRainfall(neorsdBaseURL, yearIndex, month, *logVerbose)
+		neorsdRainfallJSON := getRainfall(neorsdBaseURL, yearIndex, month, *location, *logVerbose)
 
 		//Unmarshal the monitors list into a struct
 		if *logVerbose {
@@ -113,7 +115,7 @@ func main() {
 		}
 
 		for _,day := range neorsdRainfallList.Data {
-			fmt.Printf("%v %v %v,%.2f\n", *yearToGet, month, day.TrendDataDay, day.RainTotal)
+			fmt.Printf("%v,%v %v %v,%.2f\n", *location, *yearToGet, month, day.TrendDataDay, day.RainTotal)
 		}
 	}
 }
