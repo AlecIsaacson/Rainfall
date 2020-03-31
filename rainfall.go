@@ -1,3 +1,6 @@
+// Rainfall data extraction tool to pull daily total rainfall data for an entire year from NEORSD Rainfall dashboard
+// See github.com/AlecIsaacson/Rainfall for details.
+//
 package main
 
 import (
@@ -10,6 +13,7 @@ import (
 	"net/url"
 )
 
+//NEORSD returns data in this struct.
 type neorsdRainfallStruct struct {
 	Draw            int `json:"draw"`
 	RecordsTotal    int `json:"recordsTotal"`
@@ -26,40 +30,44 @@ func getRainfall(urlToGet string, yearIndex int, month string, location string, 
 		fmt.Println("In getRainfall")
 	}
 
-formData := url.Values{
-	//"draw": {"4"},
-	// "columns[0][data]": {"trend_data_day"},
-	// "columns[0][name]": {""},
-	// "columns[0][searchable]": {"true"},
-	// "columns[0][orderable]": {"false"},
-	// "columns[0][search][value]": {""},
-	// "columns[0][search][regex]": {"false"},
-	// "columns[1][data]": {"rain_total"},
-	// "columns[1][name]": {""},
-	// "columns[1][searchable]": {"true"},
-	// "columns[1][orderable]": {"false"},
-	// "columns[1][search][value]": {""},
-	// "columns[1][search][regex]": {"false"},
-	// "start": {"0"},
-	// "length": {"10"},
-	// "search[value]": {""},
-	// "search[regex]": {"false"},
-	"startingYear": {strconv.Itoa(yearIndex)},
-	"rainfallSite": {location},
-	//"day": {"1"},
-	"month": {month},
-	//"fullDate": {"March 1, 2012"},
-}
+	//As you can see, most of the attributes aren't required.  I've left them here in case they're needed some day.
+	formData := url.Values{
+		//"draw": {"4"},
+		// "columns[0][data]": {"trend_data_day"},
+		// "columns[0][name]": {""},
+		// "columns[0][searchable]": {"true"},
+		// "columns[0][orderable]": {"false"},
+		// "columns[0][search][value]": {""},
+		// "columns[0][search][regex]": {"false"},
+		// "columns[1][data]": {"rain_total"},
+		// "columns[1][name]": {""},
+		// "columns[1][searchable]": {"true"},
+		// "columns[1][orderable]": {"false"},
+		// "columns[1][search][value]": {""},
+		// "columns[1][search][regex]": {"false"},
+		// "start": {"0"},
+		// "length": {"10"},
+		// "search[value]": {""},
+		// "search[regex]": {"false"},
+		"startingYear": {strconv.Itoa(yearIndex)},
+		"rainfallSite": {location},
+		//"day": {"1"},
+		"month": {month},
+		//"fullDate": {"March 1, 2012"},
+	}
 
+	//Post the request to NEORSD.
 	resp, err := http.PostForm(urlToGet, formData)
 
 	if logVerbose {
 		fmt.Println("NEORSD Response:", resp.Status)
 	}
+
 	if err != nil || resp.StatusCode != 200 {
 		fmt.Println("Error")
 		fmt.Println(resp)
 	}
+
 	defer resp.Body.Close()
 	response, err := ioutil.ReadAll(resp.Body)
 
@@ -93,18 +101,20 @@ func main() {
 	yearIndex := *yearToGet - yearOffset
 	months := []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
+	//Iterate through the months, getting the daily rain totals for each.
 	for _,month := range months {
 		if *logVerbose {
 			fmt.Println("Getting data for:", month, *yearToGet)
 		}
 
-		//Get the rainfall for the month.
+		//Call the function to actually get thet data.
 		neorsdRainfallJSON := getRainfall(neorsdBaseURL, yearIndex, month, *location, *logVerbose)
 
-		//Unmarshal the monitors list into a struct
+		//Unmarshal the data into a struct
 		if *logVerbose {
 			fmt.Println("Unmarshalling monitors into struct")
 		}
+
 		var neorsdRainfallList neorsdRainfallStruct
 		if err := json.Unmarshal(neorsdRainfallJSON, &neorsdRainfallList); err != nil {
 			panic(err)
@@ -114,6 +124,7 @@ func main() {
 			fmt.Println(neorsdRainfallList)
 		}
 
+		//For each day of the month, write out the info we've got.
 		for _,day := range neorsdRainfallList.Data {
 			fmt.Printf("%v,%v %v %v,%.2f\n", *location, *yearToGet, month, day.TrendDataDay, day.RainTotal)
 		}
