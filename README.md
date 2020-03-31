@@ -2,7 +2,7 @@
 
 This pulls information from the [Northeast Ohio Regional Sewer District's rainfall dashboard](https://www.neorsd.org/stormwater-2/rainfall-dashboard/).  The dashboard is good for charting, but if you want to do more analysis, you need the underlying data.  These apps will download the data (you'll need to redirect it into a file).  You can then import it into Excel or something, and analyze it as you choose.
 
-**Rainfall** pulls the daily totals for each day of the specified year.  It takes four command line arguments:
+**Rainfall** pulls the daily totals for each day of the specified year.  It takes three command line arguments:
 
   `-location` - The city you want data for (i.e. Beachwood or "Shaker Heights")  
   `-year` - The year you want data for.  The earliest data seems to be from 2012.  
@@ -12,8 +12,8 @@ The list of all locations can be seen at the NEORSD rainfall dashboard.  Locatio
 
 For example:
 
-  `./rainfall -year=2015 -location=Beachwood`
-  `./rainfall -year=2019 -location="Shaker Heights" -verbose=true`
+  `./rainfall -year=2015 -location=Beachwood`  
+  `./rainfall -year=2019 -location="Shaker Heights" -verbose=true`  
 
 **Rainfall-Detail** pulls the every 5 minute totals for a specific day.  It takes five arguments:
 
