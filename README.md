@@ -12,8 +12,8 @@ The list of all locations can be seen at the NEORSD rainfall dashboard.  Locatio
 
 For example:
 
-  ./rainfall -year=2015 -location=Beachwood
-  ./rainfall -year=2019 -location="Shaker Heights" -verbose=true
+  `./rainfall -year=2015 -location=Beachwood`
+  `./rainfall -year=2019 -location="Shaker Heights" -verbose=true`
 
 **Rainfall-Detail** pulls the every 5 minute totals for a specific day.  It takes five arguments:
 
@@ -25,4 +25,4 @@ For example:
 
 For example:
 
-  ./rainfall-detail -location=Beachwood -year=2020 -month=March -day=30
+  `./rainfall-detail -location=Beachwood -year=2020 -month=March -day=30`
