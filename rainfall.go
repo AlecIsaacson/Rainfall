@@ -4,13 +4,14 @@
 package main
 
 import (
-	"strconv"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 )
 
 //NEORSD returns data in this struct.
@@ -19,18 +20,18 @@ type neorsdRainfallStruct struct {
 	RecordsTotal    int `json:"recordsTotal"`
 	RecordsFiltered int `json:"recordsFiltered"`
 	Data            []struct {
-		TrendDataDay string `json:"trend_data_day"`
-		RainTotal    float32 `json:"rain_total,string"`
+		TrendDataDay int     `json:"trend_data_day"`
+		RainTotal    float64 `json:"rain_total"`
 	} `json:"data"`
 }
 
 //Get the NEORSD rainfall info, returning the result as a byte string.
-func getRainfall(urlToGet string, yearIndex int, month string, location string, logVerbose bool) ([]byte) {
+func getRainfall(urlToGet string, yearIndex int, month string, location string, logVerbose bool) []byte {
 	if logVerbose {
 		fmt.Println("In getRainfall")
 	}
 
-	//As you can see, most of the attributes aren't required.  I've left them here in case they're needed some day.
+	//As you can see, most of the form attributes aren't required.  I've left them here in case they're needed some day.
 	formData := url.Values{
 		//"draw": {"4"},
 		// "columns[0][data]": {"trend_data_day"},
@@ -60,6 +61,7 @@ func getRainfall(urlToGet string, yearIndex int, month string, location string, 
 	resp, err := http.PostForm(urlToGet, formData)
 
 	if logVerbose {
+		fmt.Println("Form data:", formData)
 		fmt.Println("NEORSD Response:", resp.Status)
 	}
 
@@ -72,17 +74,18 @@ func getRainfall(urlToGet string, yearIndex int, month string, location string, 
 	response, err := ioutil.ReadAll(resp.Body)
 
 	if logVerbose {
+		fmt.Println("Raw response:", string(response))
 		fmt.Println("End of getRainfall")
 	}
 	return response
 }
 
 func main() {
-	fmt.Println("GetRainfall v1.0")
+	fmt.Println("GetRainfall v1.5")
 	fmt.Println("Use -h for arguments.")
 	fmt.Println("Output is Location, Year Month Day, and rainfall in inches (rounded to nearest hundreth).")
 	fmt.Println("")
-	location := flag.String("location","Beachwood","The name of the gauge location whose data you want to get")
+	location := flag.String("location", "Beachwood", "The name of the gauge location whose data you want to get")
 	yearToGet := flag.Int("year", 2012, "Year of rainfall data to get")
 	logVerbose := flag.Bool("verbose", false, "Writes verbose logs for debugging")
 	flag.Parse()
@@ -95,23 +98,26 @@ func main() {
 	//Define the APIs base URL
 	neorsdBaseURL := "https://www.neorsd.org/Rainfall%20Dashboard/dataTableServerSide.php?rainfallDaily"
 
-	//The NEORSD API defines 2012 as year -7, 2020 is year 1.
+	//The NEORSD API defines this year as year 1.  Prior years are indexed backwards.
 	//Yes, I could have used the Go time library, but it'd be more work.
-	yearOffset := 2019
+	//yearOffset should be equal to last year.
+	yearOffset := time.Now().Year() - 1
 	yearIndex := *yearToGet - yearOffset
 	months := []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
 	//Iterate through the months, getting the daily rain totals for each.
-	for _,month := range months {
+	for _, month := range months {
 		if *logVerbose {
 			fmt.Println("Getting data for:", month, *yearToGet)
+			fmt.Println("Year Offset:", yearOffset)
 		}
 
-		//Call the function to actually get thet data.
+		//Call the function to actually get the data.
 		neorsdRainfallJSON := getRainfall(neorsdBaseURL, yearIndex, month, *location, *logVerbose)
 
 		//Unmarshal the data into a struct
 		if *logVerbose {
+			fmt.Println("JSON response:", string(neorsdRainfallJSON))
 			fmt.Println("Unmarshalling monitors into struct")
 		}
 
@@ -125,7 +131,7 @@ func main() {
 		}
 
 		//For each day of the month, write out the info we've got.
-		for _,day := range neorsdRainfallList.Data {
+		for _, day := range neorsdRainfallList.Data {
 			fmt.Printf("%v,%v %v %v,%.2f\n", *location, *yearToGet, month, day.TrendDataDay, day.RainTotal)
 		}
 	}
