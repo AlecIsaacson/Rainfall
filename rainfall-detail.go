@@ -4,13 +4,14 @@
 package main
 
 import (
-	"strconv"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 )
 
 //NEORSD returns data in this struct.
@@ -19,13 +20,13 @@ type neorsdRainfallStruct struct {
 	RecordsTotal    int `json:"recordsTotal"`
 	RecordsFiltered int `json:"recordsFiltered"`
 	Data            []struct {
-		Time 				 string `json:"time"`
-		RainTotal    float32 `json:"rain_total,string"`
+		Time      string  `json:"time"`
+		RainTotal float64 `json:"rain_total"`
 	} `json:"data"`
 }
 
 //Get the NEORSD rainfall info, returning the result as a byte string.
-func getRainfall(urlToGet string, yearIndex int, month string, day int, location string, logVerbose bool) ([]byte) {
+func getRainfall(urlToGet string, yearIndex int, month string, day int, location string, logVerbose bool) []byte {
 	if logVerbose {
 		fmt.Println("In getRainfall")
 	}
@@ -51,8 +52,8 @@ func getRainfall(urlToGet string, yearIndex int, month string, day int, location
 		// "search[regex]": {"false"},
 		"startingYear": {strconv.Itoa(yearIndex)},
 		"rainfallSite": {location},
-		"day": {strconv.Itoa(day)},
-		"month": {month},
+		"day":          {strconv.Itoa(day)},
+		"month":        {month},
 		//"fullDate": {"March 1, 2012"},
 	}
 
@@ -78,11 +79,11 @@ func getRainfall(urlToGet string, yearIndex int, month string, day int, location
 }
 
 func main() {
-	fmt.Println("GetRainfall Detail v1.0")
+	fmt.Println("GetRainfall Detail v1.5")
 	fmt.Println("Use -h for command line arguments")
 	fmt.Println("Output is Location, Year Month Day, Time, and rainfall in inches (rounded to nearest hundreth).")
 	fmt.Println("")
-	location := flag.String("location","Beachwood","The name of the gauge location whose data you want to get")
+	location := flag.String("location", "Beachwood", "The name of the gauge location whose data you want to get")
 	monthToGet := flag.String("month", "January", "Month to collect info for")
 	dayToGet := flag.Int("day", 1, "Day to collect info for")
 	yearToGet := flag.Int("year", 2012, "Year of rainfall data to get")
@@ -99,14 +100,20 @@ func main() {
 
 	//The NEORSD API defines 2012 as year -7, 2020 is year 1.
 	//Yes, I could have used the Go time library, but it'd be more work.
-	yearOffset := 2019
+	yearOffset := time.Now().Year() - 1
 	yearIndex := *yearToGet - yearOffset
+
+	if *logVerbose {
+		fmt.Println("Getting data for:", *monthToGet, *dayToGet, *yearToGet)
+		fmt.Println("Year Offset:", yearOffset)
+	}
 
 	//Get the detailed rainfall info for the specified date.
 	neorsdRainfallJSON := getRainfall(neorsdBaseURL, yearIndex, *monthToGet, *dayToGet, *location, *logVerbose)
 
 	//Unmarshal the data into a struct
 	if *logVerbose {
+		fmt.Println("JSON response:", string(neorsdRainfallJSON))
 		fmt.Println("Unmarshalling monitors into struct")
 	}
 
@@ -120,7 +127,7 @@ func main() {
 	}
 
 	//For each time period, write out the info we've got.
-	for _,time := range neorsdRainfallList.Data {
+	for _, time := range neorsdRainfallList.Data {
 		fmt.Printf("%v,%v %v %v,%v,%.2f\n", *location, *yearToGet, *monthToGet, *dayToGet, time.Time, time.RainTotal)
 	}
 }
